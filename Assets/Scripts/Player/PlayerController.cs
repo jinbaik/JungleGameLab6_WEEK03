@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,6 +11,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _moveSpeed = 30f;
     private Vector2 _rotationValue = Vector2.zero;
 
+    private float _positionOffset = 5f;
+    private float _rotationOffset = 0f;
+    private float resetDuration = 3f;
+
+    private bool _isStuck = false;
+
     void Awake()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -18,8 +25,12 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        HandleRotation();
+        WallInteraction();
+
+        if (_isStuck) return;
+
         HandleAcceleration();
+        HandleRotation();
     }
 
     private void OnLook(InputValue value)
@@ -31,6 +42,17 @@ public class PlayerController : MonoBehaviour
 
         _rotationValue.x = Mathf.Clamp(_rotationValue.x, _minPitch, _maxPitch);
     }
+
+    private void OnAttack(InputValue value)
+    {
+        if (!_isStuck) return;
+
+        if (value.isPressed)
+        {
+            StartCoroutine(ResetTransform());
+        }
+    }
+
     private void HandleRotation()
     {
         transform.rotation = Quaternion.Euler(_rotationValue.x, _rotationValue.y, 0f);
@@ -46,4 +68,61 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void WallInteraction()
+    {
+        if (Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, 1f))
+        {
+            if(hit.transform.CompareTag("Stuckable"))
+            {
+                _isStuck = true;
+            }
+        }
+    }
+
+    private IEnumerator ResetTransform()
+    {
+        float elapsed = 0f;
+
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = startPosition + Vector3.up * _positionOffset;
+
+        Quaternion startRotation = transform.rotation;
+
+        Vector3 startEuler = transform.eulerAngles;
+
+        Quaternion targetRotation = Quaternion.Euler(
+            0f,
+            startEuler.y,
+            0f
+        );
+
+        while (elapsed < resetDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            float t = Mathf.Clamp01(elapsed / resetDuration);
+
+            transform.position = Vector3.Lerp(
+                startPosition,
+                targetPosition,
+                t
+            );
+
+            transform.rotation = Quaternion.Lerp(
+                startRotation,
+                targetRotation,
+                t
+            );
+
+            yield return null;
+        }
+
+        transform.position = targetPosition;
+        transform.rotation = targetRotation;
+
+        _rotationValue.x = 0f;
+        _rotationValue.y = transform.eulerAngles.y;
+
+        _isStuck = false;
+    }
 }
