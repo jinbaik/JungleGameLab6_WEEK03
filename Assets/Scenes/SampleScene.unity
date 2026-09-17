@@ -458,7 +458,7 @@ GameObject:
   - component: {fileID: 1134179154}
   - component: {fileID: 1134179153}
   - component: {fileID: 1134179152}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -633,7 +633,7 @@ GameObject:
   - component: {fileID: 1316953820}
   - component: {fileID: 1316953819}
   - component: {fileID: 1316953818}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Dome
   m_TagString: Untagged
   m_Icon: {fileID: 0}

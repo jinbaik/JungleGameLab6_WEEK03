@@ -10,6 +10,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _moveSpeed = 30f;
     private Vector2 _rotationValue = Vector2.zero;
 
+    private bool _isStuck = false;
+
     void Awake()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -18,8 +20,12 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        HandleRotation();
+        WallInteraction();
+
+        if (_isStuck) return;
+
         HandleAcceleration();
+        HandleRotation();
     }
 
     private void OnLook(InputValue value)
@@ -46,4 +52,14 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void WallInteraction()
+    {
+        if (Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, 1f))
+        {
+            if(hit.transform.CompareTag("Stuckable"))
+            {
+                _isStuck = true;
+            }
+        }
+    }
 }
