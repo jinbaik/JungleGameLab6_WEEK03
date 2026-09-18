@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
 
-public class Enemy_Ground_Basic : EnemyBase
+public class Enemy_Basic : EnemyBase
 {
+
     protected override void Movement()
     {
         if (Vector3.Distance(this.transform.position, target.position) >= maxDistance)
@@ -33,3 +34,4 @@ public class Enemy_Ground_Basic : EnemyBase
         OnDamage();
     }
 }
+

@@ -30,7 +30,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Arrow"))
+        if (other.CompareTag("Player"))
         {
             OnHit(other);
         }

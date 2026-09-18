@@ -93,11 +93,6 @@ public class PlayerController : MonoBehaviour
     private void HandleAcceleration()
     {
         transform.Translate(Vector3.forward * Time.deltaTime * _moveSpeed);
-
-        if (transform.position.y < 0.4f)
-        {
-            transform.position = new Vector3(transform.position.x, 0.4f, transform.position.z);
-        }
     }
 
     private void WallInteraction()
