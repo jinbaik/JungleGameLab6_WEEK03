@@ -2,18 +2,15 @@
 
 public abstract class EnemyBase : MonoBehaviour
 {
-    [SerializeField]
-    protected Transform target;
+    [SerializeField] protected Transform _target;
 
-    [SerializeField]
-    // 접근 속도
-    protected float speed = 0.01f;
-    [SerializeField]
-    // 최대 접근 거리
-    protected float maxDistance = 2;
+    [SerializeField] protected float _speed = 0.01f;
+    [SerializeField] protected float _maxDistance = 2;
+    [SerializeField] protected int _maxHP = 3;
+    [SerializeField] protected int _currentHP = 0;
 
 
-    private void Awake()
+    private void OnEnable()
     {
         Init();
     }
@@ -25,20 +22,20 @@ public abstract class EnemyBase : MonoBehaviour
 
     public void SetData(Transform target)
     {
-        this.target = target;
+        this._target = target;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnCollisionEnter(Collision collision)
     {
-        if (other.CompareTag("Player"))
+        if (collision.gameObject.CompareTag("Player"))
         {
-            OnHit(other);
+            OnHit(collision);
         }
     }
 
 
     protected abstract void Init();
-    protected abstract void OnHit(Collider other);
+    protected abstract void OnHit(Collision collision);
     protected abstract void Movement();
     protected abstract void OnDamage();
 

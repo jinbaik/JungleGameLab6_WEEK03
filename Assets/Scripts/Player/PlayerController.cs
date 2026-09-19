@@ -18,10 +18,13 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private int _maxBounce = 3;
     [SerializeField] private float _collisionTime = 1f;
     [SerializeField] private float _bounceForce = 10f;
+    [SerializeField] private float _resetDuration = 1f;
 
     [Header("Flight Gauge")]
     [SerializeField] private float _maxGauge = 20f;
     [SerializeField] private Slider _flightGaugeUI;
+    [SerializeField] private GameObject _FlightGaugeFillArea;
+
 
     private int _currentBounceCount = 0;
     private Rigidbody _body;
@@ -32,6 +35,8 @@ public class PlayerController : MonoBehaviour
 
     private bool _isTryFlight = false;
     private float _currentGauge = 0f;
+
+    private bool _isStuck = false;
 
 
     private void Awake()
@@ -59,11 +64,10 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         HandleAcceleration();
+        UpdateRotation();
 
-        if (!_isTryFlight)
-        {
-            return;
-        }
+        if (!_isTryFlight) return;
+        if (_currentGauge <= 0) return;
         // 누르고 있을 때 넘어갈 수 있고
         // 누르고 있는거랑 무관하게 Accel은 되는데, target이 0으로 잡히도록
 
@@ -73,8 +77,6 @@ public class PlayerController : MonoBehaviour
         {
             HandleRotation();
         }
-
-        UpdateRotation();
     }
 
 
@@ -87,7 +89,7 @@ public class PlayerController : MonoBehaviour
     private void OnAttack(InputValue value)
     {
         _isTryFlight = value.isPressed;
-        if(_isTryFlight)
+        if(_isTryFlight && _currentGauge > 0)
         {
             StartCoroutine(UseGauge(0.1f, 0.1f));
             StopCoroutine(RegainGauge(1f, 1f));
@@ -111,7 +113,7 @@ public class PlayerController : MonoBehaviour
             _lookDelta.y
         );
 
-        _visibleTarget.position += movement * _sensitivity;
+        _visibleTarget.position -= movement * _sensitivity;
 
         _lookDelta = Vector2.zero;
     }
@@ -196,9 +198,10 @@ public class PlayerController : MonoBehaviour
     // Movement
     // =========================================================
 
+    //HandleAcceleration이랑 UpdateAcceleration이랑 나누기
     private void HandleAcceleration()
     {
-        if (_isTryFlight)
+        if (_isTryFlight && _currentGauge > 0)
             SetTargetVelocity(transform.forward * _moveSpeed);
         else
             SetTargetVelocity(Vector3.zero);
@@ -244,52 +247,55 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (!collision.transform.CompareTag("Stuckable"))
-            return;
+        if (collision.transform.CompareTag("Bounceable"))
+        {
+            if (_currentBounceCount >= _maxBounce)
+            {
+                return;
+            }
+                
 
-        if (_currentBounceCount >= _maxBounce)
-            return;
-
-        _currentBounceCount++;
-
-
-        // 충돌 지점의 법선 벡터
-        Vector3 normal =
-            collision.GetContact(0).normal;
+            _currentBounceCount++;
 
 
-        // 현재 진행 방향을 충돌면 기준으로 반사
-        Vector3 reflectDirection = Vector3.Reflect(
-            transform.forward,
-            normal
-        );
-
-        // Top View이므로 Y축 제거
-        reflectDirection.y = 0f;
+            // 충돌 지점의 법선 벡터
+            Vector3 normal =
+                collision.GetContact(0).normal;
 
 
-        if (reflectDirection.sqrMagnitude <= 0.001f)
-            return;
+            // 현재 진행 방향을 충돌면 기준으로 반사
+            Vector3 reflectDirection = Vector3.Reflect(
+                transform.forward,
+                normal
+            );
+
+            // Top View이므로 Y축 제거
+            reflectDirection.y = 0f;
 
 
-        reflectDirection.Normalize();
+            if (reflectDirection.sqrMagnitude <= 0.001f)
+                return;
 
 
-        // 반사 방향을 목표 회전으로 설정
-        Quaternion bounceRotation =
-            Quaternion.LookRotation(reflectDirection);
-
-        SetTargetRotation(bounceRotation);
+            reflectDirection.Normalize();
 
 
-        // 반사 방향으로 물리적인 힘도 가함
-        _body.AddForce(
-            reflectDirection * _bounceForce,
-            ForceMode.Impulse
-        );
+            // 반사 방향을 목표 회전으로 설정
+            Quaternion bounceRotation =
+                Quaternion.LookRotation(reflectDirection);
+
+            SetTargetRotation(bounceRotation);
 
 
-        StartCoroutine(CollisionTimer());
+            // 반사 방향으로 물리적인 힘도 가함
+            _body.AddForce(
+                reflectDirection * _bounceForce,
+                ForceMode.Impulse
+            );
+
+
+            StartCoroutine(CollisionTimer());
+        }
     }
 
 
@@ -302,6 +308,24 @@ public class PlayerController : MonoBehaviour
         _isCollision = false;
     }
 
+    private void StuckInteraction()
+    {
+        if (Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, 1f))
+        {
+            if (hit.transform.CompareTag("Bounceable")) 
+            {
+                if(_currentBounceCount >= _maxBounce)
+                {
+                    _isStuck = true;
+                }
+                return;
+            }
+            if (hit.transform.CompareTag("Stuckable"))
+            {
+                _isStuck = true;
+            }
+        }
+    }
 
     // =========================================================
     // Flight Gauge
@@ -314,9 +338,16 @@ public class PlayerController : MonoBehaviour
 
             _currentGauge -= consumeGauge;
 
+
             _currentGauge = Mathf.Clamp(_currentGauge, 0, _maxGauge);
 
             _flightGaugeUI.value = _currentGauge;
+
+            if (_currentGauge <= 0)
+            {
+                SetTargetVelocity(Vector3.zero);
+                _FlightGaugeFillArea.SetActive(false);
+            }
 
             yield return new WaitForSeconds(consumeInterval);
         }
@@ -332,8 +363,54 @@ public class PlayerController : MonoBehaviour
             _currentGauge = Mathf.Clamp(_currentGauge, 0, _maxGauge);
 
             _flightGaugeUI.value = _currentGauge;
+            
+            if (!_FlightGaugeFillArea.activeInHierarchy)
+            {
+                _FlightGaugeFillArea.SetActive(true);
+            }
 
             yield return new WaitForSeconds(regainInterval);
         }
+    }
+
+    private IEnumerator ResetTransform()
+    {
+        float elapsed = 0f;
+
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = startPosition;
+
+        Quaternion startRotation = transform.rotation;
+
+        Vector3 startEuler = transform.eulerAngles;
+
+        Quaternion targetRotation = Quaternion.Euler(
+            0f,
+            startEuler.y,
+            0f
+        );
+
+        while (elapsed < _resetDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            float t = Mathf.Clamp01(elapsed / _resetDuration);
+
+            transform.position = Vector3.Lerp(
+                startPosition,
+                targetPosition,
+                t
+            );
+
+            transform.rotation = Quaternion.Lerp(
+                startRotation,
+                targetRotation,
+                t
+            );
+
+            yield return null;
+        }
+
+        _isStuck = false;
     }
 }
