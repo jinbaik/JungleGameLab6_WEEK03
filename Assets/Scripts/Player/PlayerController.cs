@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement Parameter")]
@@ -18,24 +19,31 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _collisionTime = 1f;
     [SerializeField] private float _bounceForce = 10f;
 
+    [Header("Flight Gauge")]
+    [SerializeField] private float _maxGauge = 20f;
+    [SerializeField] private Slider _flightGaugeUI;
+
     private int _currentBounceCount = 0;
-
     private Rigidbody _body;
-
     private Vector2 _lookDelta;
-
-    // 현재 추적해야 하는 목표 회전
+    private Vector3 _targetVelocity;
     private Quaternion _targetRotation;
-
     private bool _isCollision = false;
+
+    private bool _isTryFlight = false;
+    private float _currentGauge = 0f;
 
 
     private void Awake()
     {
         _body = GetComponent<Rigidbody>();
 
-        // 최초 회전값으로 초기화
         _targetRotation = _body.rotation;
+
+        _currentGauge = _maxGauge;
+
+        _flightGaugeUI.maxValue = _maxGauge;
+        _flightGaugeUI.value = _currentGauge;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -50,8 +58,14 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-
         HandleAcceleration();
+
+        if (!_isTryFlight)
+        {
+            return;
+        }
+        // 누르고 있을 때 넘어갈 수 있고
+        // 누르고 있는거랑 무관하게 Accel은 되는데, target이 0으로 잡히도록
 
         // 충돌 중에는 VisibleTarget 방향으로
         // 목표 회전을 갱신하지 않는다.
@@ -72,6 +86,16 @@ public class PlayerController : MonoBehaviour
 
     private void OnAttack(InputValue value)
     {
+        _isTryFlight = value.isPressed;
+        if(_isTryFlight)
+        {
+            StartCoroutine(UseGauge(0.1f, 0.1f));
+            StopCoroutine(RegainGauge(1f, 1f));
+        }
+        else
+        {
+            StartCoroutine(RegainGauge(1f, 1f));
+        }
     }
 
 
@@ -174,15 +198,18 @@ public class PlayerController : MonoBehaviour
 
     private void HandleAcceleration()
     {
-        Vector3 targetVelocity =
-            transform.forward * _moveSpeed;
+        if (_isTryFlight)
+            SetTargetVelocity(transform.forward * _moveSpeed);
+        else
+            SetTargetVelocity(Vector3.zero);
+
 
         Vector3 velocityDelta =
-            targetVelocity - _body.linearVelocity;
+            _targetVelocity - _body.linearVelocity;
 
         if (_moveResponseTime <= 0f)
         {
-            _body.linearVelocity = targetVelocity;
+            _body.linearVelocity = _targetVelocity;
             return;
         }
 
@@ -204,6 +231,10 @@ public class PlayerController : MonoBehaviour
             acceleration,
             ForceMode.Acceleration
         );
+    }
+    private void SetTargetVelocity(Vector3 targetVelocity)
+    {
+        _targetVelocity = targetVelocity;
     }
 
 
@@ -269,5 +300,40 @@ public class PlayerController : MonoBehaviour
         yield return new WaitForSeconds(_collisionTime);
 
         _isCollision = false;
+    }
+
+
+    // =========================================================
+    // Flight Gauge
+    // =========================================================
+
+    private IEnumerator UseGauge(float consumeGauge, float consumeInterval)
+    {
+        while(_isTryFlight)
+        {
+
+            _currentGauge -= consumeGauge;
+
+            _currentGauge = Mathf.Clamp(_currentGauge, 0, _maxGauge);
+
+            _flightGaugeUI.value = _currentGauge;
+
+            yield return new WaitForSeconds(consumeInterval);
+        }
+    }
+
+    private IEnumerator RegainGauge(float regainGauge, float regainInterval)
+    {
+        yield return new WaitForSeconds(regainInterval);
+        while (!_isTryFlight)
+        {
+            _currentGauge += regainGauge;
+
+            _currentGauge = Mathf.Clamp(_currentGauge, 0, _maxGauge);
+
+            _flightGaugeUI.value = _currentGauge;
+
+            yield return new WaitForSeconds(regainInterval);
+        }
     }
 }
