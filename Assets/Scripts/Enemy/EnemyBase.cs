@@ -7,7 +7,7 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected float _speed = 0.01f;
     [SerializeField] protected float _maxDistance = 2;
     [SerializeField] protected int _maxHP = 3;
-    [SerializeField] protected int _currentHP = 0;
+    [SerializeField] public int _currentHP = 0;
 
 
     private void OnEnable()
@@ -37,7 +37,7 @@ public abstract class EnemyBase : MonoBehaviour
     protected abstract void Init();
     protected abstract void OnHit(Collision collision);
     protected abstract void Movement();
-    protected abstract void OnDamage();
+    protected abstract void OnDamage(int damage);
 
     public virtual void OnAttackPlayer()
     {

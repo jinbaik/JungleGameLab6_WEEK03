@@ -106,7 +106,7 @@ public class EnemySpawn : MonoBehaviour
     {
         Vector2 randomDirection = Random.insideUnitCircle.normalized;
 
-        return new Vector3(randomDirection.x, 0f, randomDirection.y) * spawnDistance + new Vector3(0, 10, 0);
+        return new Vector3(randomDirection.x, 0f, randomDirection.y) * spawnDistance + new Vector3(0, 2, 0);
     }
 
     public void GameStart()

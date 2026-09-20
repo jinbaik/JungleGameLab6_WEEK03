@@ -3,6 +3,7 @@ using UnityEngine.AI;
 
 public class Enemy_Basic : EnemyBase
 {
+    [SerializeField] private GameObject _resourcePrefab;
 
     protected override void Movement()
     {
@@ -12,12 +13,16 @@ public class Enemy_Basic : EnemyBase
         }
     }
 
-    protected override void OnDamage()
+    protected override void OnDamage(int damage)
     {
-        _currentHP--;
+        _currentHP -= damage;
+        Debug.Log(damage);
         if(_currentHP <= 0)
         {
-            this.gameObject.SetActive(false);
+            GameObject resource = Instantiate(_resourcePrefab);
+            resource.transform.position = this.transform.position;
+
+            this.gameObject.SetActive(false);            
         }
     }
 
@@ -35,7 +40,7 @@ public class Enemy_Basic : EnemyBase
 
     protected override void OnHit(Collision collision)
     {
-        OnDamage();
+        OnDamage(collision.gameObject.GetComponent<PlayerController>().currentDamage);
     }
 }
 

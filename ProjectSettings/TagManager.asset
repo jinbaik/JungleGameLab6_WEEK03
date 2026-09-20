@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Stuckable
   - Bounceable
+  - Resource
   layers:
   - Default
   - TransparentFX
